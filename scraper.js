@@ -33,7 +33,8 @@ if (second < 10) {
 let date = `${year}-${month}-${day}`;
 let time = `${hour}-${minute}-${second}`;
 
-//Promise.resolve().
+/* Creating headers for a CSV file with the help of
+ CSV-writer package */
 const csvWriter = createCsvWriter({
     path: `./data/${date}.csv`,
     header: [
@@ -51,63 +52,67 @@ const mainURL = 'http://shirts4mike.com';
 const entryURL = '/shirts.php';
 const dataToStore = [];
 
-const request = http.get(`${mainURL}${entryURL}`, response => {
-  /* Reading data from the response */
-  console.log(response.statusCode);
-  let body = "";
-  response.on('data', data => {
-  body += data.toString();
-  });
+/***********************************************/
+const gatherInformation = (generalURL, urlOfTshirt) => {
+    http.get(`${generalURL}/${urlOfTshirt}`, response => {
+      let bodyTshirt = "";
+      response.on('data', data => {
+      bodyTshirt += data.toString();
+      });
+      response.on('end', () => {
+          const title = $('.shirt-details h1', bodyTshirt).contents()[0].next.data; // title
+          const price = $('.price', bodyTshirt).text(); // price
+          const imgURL = $('.shirt-picture span img', bodyTshirt).attr('src'); //img URL
+          const tshirtURL =`${generalURL}/${urlOfTshirt}`; //URL
+          time = `${time}`;
+          let tshirtInfo = {
+            title: title,
+            price: price,
+            imgURL: imgURL,
+            tshirtURL: tshirtURL,
+            time: time
+          };
+          dataToStore.push(tshirtInfo);
 
-  response.on('end', ()=> {
-    try {
+          if (dataToStore.length === 8) {
+            csvWriter.writeRecords(dataToStore)
+                .then(() => {
+                    console.log('...Done');
+                });
+          }
+      }); // on.end
+    }) //http.get
+} // gatherInformation
+/*******************************************/
 
-    }
-    /* Checking whether a "data" folder exists.
-    If not, create it.*/
-    if (!fs.existsSync('./data')) {
-        fs.mkdirSync('./data');
-      }
 
-    /***********************************************/
-    const gatherInformation = (generalURL, urlOfTshirt) => {
-        http.get(`${generalURL}/${urlOfTshirt}`, response => {
-          let bodyTshirt = "";
-          response.on('data', data => {
-          bodyTshirt += data.toString();
-          });
-          response.on('end', () => {
-              const title = $('.shirt-details h1', bodyTshirt).contents()[0].next.data; // title
-              const price = $('.price', bodyTshirt).text(); // price
-              const imgURL = $('.shirt-picture span img', bodyTshirt).attr('src'); //img URL
-              const tshirtURL =`${generalURL}/${urlOfTshirt}`; //URL
-              time = `${time}`;
-              let tshirtInfo = {
-                title: title,
-                price: price,
-                imgURL: imgURL,
-                tshirtURL: tshirtURL,
-                time: time
-              };
-              dataToStore.push(tshirtInfo);
+const connectToEntryURL = (url, additionalUrl) => {
+  const request = http.get(`${url}${additionalUrl}`, response => {
+      /* Reading data from the response */
+      let body = "";
+      response.on('data', data => {
+      body += data.toString();
+      });
+      response.on('end', ()=> {
+          /* Checking whether a "data" folder exists.
+          If not, create it.*/
+          if (!fs.existsSync('./data')) {
+              fs.mkdirSync('./data');
+            }
+          // Gathering links from every t-shirt url
+          const tshirtsLinks = $('.products li > a', body);
+          for (let i = 0; i < tshirtsLinks.length; i += 1) {
+            gatherInformation(url, tshirtsLinks[i].attribs.href);
+          }
+   }); //end
+  }); // end of request
 
-              if (dataToStore.length === 8) {
-                csvWriter.writeRecords(dataToStore)
-                    .then(() => {
-                        console.log('...Done');
-                    });
-              }
-          }); // on.end
-          //response.error(); // handling errors for T-shirts URLs
-        }) //http.get
-    } // gatherInformation
-    /**********************************************/
+ request.on('error', error =>  {
+   if (error.code == "ENOTFOUND") {
+     console.error(`There has been a 404 error. Cannot connect to ${mainURL}`);
+   }
+ });
+} //connectToEnryURL
 
-    // Gathering links from every t-shirt url
-    const tshirtsLinks = $('.products li > a', body);
-    for (let i = 0; i < tshirtsLinks.length; i += 1) {
-      gatherInformation(mainURL, tshirtsLinks[i].attribs.href);
-    }
-}); // entryURL response "end"
 
-}); // end of request
+connectToEntryURL(mainURL, entryURL);
