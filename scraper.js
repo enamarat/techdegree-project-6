@@ -31,7 +31,7 @@ if (second < 10) {
 }
 
 let date = `${year}-${month}-${day}`;
-let time = `${hour}-${minute}-${second}`;
+let time = `${hour}:${minute}:${second}`;
 
 /* Creating headers for a CSV file with the help of
  CSV-writer package */
