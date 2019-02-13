@@ -52,8 +52,9 @@ const mainURL = 'http://shirts4mike.com';
 const entryURL = '/shirts.php';
 const dataToStore = [];
 
-/***********************************************/
-const gatherInformation = (generalURL, urlOfTshirt) => {
+/* This function gathers information from every individual
+page of each T-shirt and stores this data in an array */
+const gatherInformation = (generalURL, urlOfTshirt, numberOfLinks) => {
     http.get(`${generalURL}/${urlOfTshirt}`, response => {
       let bodyTshirt = "";
       response.on('data', data => {
@@ -73,8 +74,9 @@ const gatherInformation = (generalURL, urlOfTshirt) => {
             time: time
           };
           dataToStore.push(tshirtInfo);
-
-          if (dataToStore.length === 8) {
+          /* When data from each link is stored in array,
+          a CSV file is created */
+          if (dataToStore.length === numberOfLinks) {
             csvWriter.writeRecords(dataToStore)
                 .then(() => {
                     console.log('...Done');
@@ -85,7 +87,8 @@ const gatherInformation = (generalURL, urlOfTshirt) => {
 } // gatherInformation
 /*******************************************/
 
-
+/* This function connects to entry URL and collects
+all links to individual pages of every T-shirt */
 const connectToEntryURL = (url, additionalUrl) => {
   const request = http.get(`${url}${additionalUrl}`, response => {
       /* Reading data from the response */
@@ -102,7 +105,7 @@ const connectToEntryURL = (url, additionalUrl) => {
           // Gathering links from every t-shirt url
           const tshirtsLinks = $('.products li > a', body);
           for (let i = 0; i < tshirtsLinks.length; i += 1) {
-            gatherInformation(url, tshirtsLinks[i].attribs.href);
+            gatherInformation(url, tshirtsLinks[i].attribs.href, tshirtsLinks.length);
           }
    }); //end
   }); // end of request
